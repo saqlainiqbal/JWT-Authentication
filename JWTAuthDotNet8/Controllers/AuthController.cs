@@ -1,5 +1,6 @@
 ﻿using JWTAuthDotNet8.Models;
 using JWTAuthDotNet8.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace JWTAuthDotNet8.Controllers
@@ -30,6 +31,12 @@ namespace JWTAuthDotNet8.Controllers
             return Unauthorized("Invalid Credentials.");
          }
          return Ok(token);
+      }
+      [Authorize]
+      [HttpGet("TestAuthorized")]
+      public IActionResult TestAuthorized()
+      {
+         return Ok("You are authorized.");
       }
    }
 }

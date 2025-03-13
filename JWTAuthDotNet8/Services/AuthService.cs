@@ -46,6 +46,7 @@ namespace JWTAuthDotNet8.Services
          var claims = new List<Claim>
          {
            new(ClaimTypes.Name, user.Username),
+           new(ClaimTypes.NameIdentifier, user.Id.ToString()),
            new(ClaimTypes.Role, user.Role)
          };
          var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration.GetValue<string>("AppSettings:Token")!));
