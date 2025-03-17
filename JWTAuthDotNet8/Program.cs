@@ -2,6 +2,7 @@ using JWTAuthDotNet8.Data;
 using JWTAuthDotNet8.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
@@ -29,6 +30,13 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
          IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration.GetValue<string>("AppSettings:Token")!))
       };
    });
+builder.Services.AddCors(Options =>
+{
+   Options.AddDefaultPolicy(builder =>
+   {
+      builder.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
+   });
+});
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
