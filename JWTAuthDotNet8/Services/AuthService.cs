@@ -6,13 +6,14 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace JWTAuthDotNet8.Services
 {
    public class AuthService(AppDbContext dbContext, IConfiguration configuration) : IAuthService
    {
-      public async Task<string?> LoginAsync(UserDTO request)
+      public async Task<TokenResponseDTO?> LoginAsync(UserDTO request)
       {
          var user =  await dbContext.Users.FirstOrDefaultAsync(u => u.Username == request.Username);
          if(user is null)
@@ -24,7 +25,12 @@ namespace JWTAuthDotNet8.Services
             return null;
          }
          string token = GenerateJWTToken(user);
-         return token;
+         var response = new TokenResponseDTO
+         {
+            Token = token,
+            RefreshToken = await GenrateAndSaveRefreshTokenAsync(user)
+         };
+         return response;
       }
 
       public async Task<User?> RegisterUserAsync(UserDTO request)
@@ -40,6 +46,32 @@ namespace JWTAuthDotNet8.Services
          await dbContext.Users.AddAsync(user);
          await dbContext.SaveChangesAsync();
          return user;
+      }
+
+      private async Task<User?> ValidateRefreshTokenAsync(Guid userId , string refreshToken)
+      {
+         var user = await dbContext.Users.FirstOrDefaultAsync(u => u.Id == userId);
+         if (user is null || user.RefreshToken != refreshToken || user.RefreshTokenExpiryTime <= DateTime.Now)
+         {
+            return null;
+         }
+         return user;
+
+      }
+      private static string GenrateRefreshToken()
+      {
+         var randomNumber = new byte[32];
+         using var rng = RandomNumberGenerator.Create();
+         rng.GetBytes(randomNumber);
+         return Convert.ToBase64String(randomNumber);
+      }
+      private async Task<string> GenrateAndSaveRefreshTokenAsync(User user)
+      {
+         var refreshToken = GenrateRefreshToken();
+         user.RefreshToken = refreshToken;
+         user.RefreshTokenExpiryTime = DateTime.Now.AddDays(7);
+         await dbContext.SaveChangesAsync();
+         return refreshToken;
       }
       private string GenerateJWTToken(User user)
       {
@@ -59,6 +91,21 @@ namespace JWTAuthDotNet8.Services
             signingCredentials: creds
          );
          return new JwtSecurityTokenHandler().WriteToken(token);
+      }
+
+      public async Task<TokenResponseDTO?> RefrehTokenAsync(RefreshTokenRequestDTO refreshToken)
+      {
+         var user = await ValidateRefreshTokenAsync(refreshToken.userId, refreshToken.refreshToken);
+         if (user is null)
+         {
+            return null;
+         }
+         var response = new TokenResponseDTO
+         {
+            Token = GenerateJWTToken(user),
+            RefreshToken = await GenrateAndSaveRefreshTokenAsync(user)
+         };
+         return response;
       }
    }
 }

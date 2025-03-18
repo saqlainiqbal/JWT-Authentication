@@ -25,18 +25,34 @@ namespace JWTAuthDotNet8.Controllers
       [HttpPost("login")]
       public async Task<IActionResult> LoginAsync(UserDTO request)
       {
-         var token = await authService.LoginAsync(request);
-         if(token is null)
+         var result = await authService.LoginAsync(request);
+         if(result is null)
          {
-            return Unauthorized("Invalid Credentials.");
+            return Unauthorized("Invalid username or Password.");
          }
-         return Ok(token);
+         return Ok(result);
+      }
+      [HttpPost("refresh-token")]
+      public async Task<IActionResult> RefreshTokenAsync(RefreshTokenRequestDTO request)
+      {
+         var result = await authService.RefrehTokenAsync(request);
+         if (result is null || result.RefreshToken is null || result.Token is null)
+         {
+            return Unauthorized("Invalid refresh token.");
+         }
+         return Ok(result);
       }
       [Authorize]
       [HttpGet("TestAuthorized")]
       public IActionResult TestAuthorized()
       {
          return Ok("You are authorized.");
+      }
+      [Authorize(Roles = "Admin")]
+      [HttpGet("TestAdmin")]
+      public IActionResult TestAdmin()
+      {
+         return Ok("You are an Admin.");
       }
    }
 }
